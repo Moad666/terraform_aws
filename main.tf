@@ -1,11 +1,12 @@
 # allows Terraform to interact with AWS to manage and provision infrastructure resources
 provider "aws" {
   region = "us-east-1"
-  access_key = "**********"
-  secret_key = "*******************"
+  access_key = "*******************"
+  secret_key = "****************************************************"
 }
 
 # defines an AWS EC2 instance resource
+# resource type
 resource "aws_instance" "ec2" {
   ami           = "ami-04b70fa74e45c3917"
   instance_type = "t2.micro"
@@ -28,7 +29,7 @@ resource "aws_iam_role" "eb_role" {
         Action = "sts:AssumeRole",
         Effect = "Allow",
         Principal = {
-          Service = "ec2.amazonaws.com"
+          Service = "ec2.amazonaws.com" # EC2 instances are allowed to assume this role.
         }
       }
     ]
@@ -36,6 +37,7 @@ resource "aws_iam_role" "eb_role" {
 }
 
 # Defines an IAM instance profile for Elastic Beanstalk EC2 instances
+# AWS object that is used to store an IAM role
 resource "aws_iam_instance_profile" "eb_instance_profile" {
   name = "elastic_beanstalk_ec2_instance_profile"
   role = aws_iam_role.eb_role.name
@@ -58,10 +60,10 @@ resource "aws_elastic_beanstalk_environment" "env" {
   name                = "my-app-env"
   application         = aws_elastic_beanstalk_application.app.name
   solution_stack_name = "64bit Amazon Linux 2 v3.3.14 running Python 3.8"
-  wait_for_ready_timeout = "30m"
+  wait_for_ready_timeout = "30m" # the maximum amount of time Terraform will wait for the Elastic Beanstalk environment to be in a ready state after creation
 
   setting {
-    namespace = "aws:autoscaling:launchconfiguration"
+    namespace = "aws:autoscaling:launchconfiguration" #  launch configuration settings for the auto-scaling group
     name      = "IamInstanceProfile"
     value     = aws_iam_instance_profile.eb_instance_profile.name
   }
@@ -91,6 +93,18 @@ resource "aws_iam_user_policy" "user_policy" {
   })
 }
 
+# cloud storage service designed for storing and retrieving any amount of data at any time.
+# Defines an s3 bucket
+resource "aws_s3_bucket" "my_bucket" {
+  bucket = "my-unique-bucket-us-east-1-2024"
+  # Tags are key-value pairs used for organizing and managing AWS resources
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+
+
 #Defines the outputs that you want to retrieve after your resources are created.
 output "ec2_instance_id" {
   value = aws_instance.ec2.id # Outputs the EC2 instance ID
@@ -106,4 +120,8 @@ output "elastic_beanstalk_env_name" {
 
 output "iam_user_name" {
   value = aws_iam_user.user.name # Outputs the IAM user name
+}
+
+output "s3_bucket" {
+    value = aws_s3_bucket.my_bucket
 }
